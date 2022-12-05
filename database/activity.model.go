@@ -2,22 +2,10 @@ package database
 
 import (
 	"database/sql"
-	"encoding/json"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
-
-type NullTime struct {
-	sql.NullTime
-}
-
-func (s NullTime) MarshalJSON() ([]byte, error) {
-	if s.Valid {
-		return json.Marshal(s.Time)
-	}
-	return []byte(`null`), nil
-}
 
 type Activity struct {
 	Id        int64     `json:"id"`

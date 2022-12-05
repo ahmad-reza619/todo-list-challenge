@@ -17,5 +17,11 @@ func setupRouter() *chi.Mux {
 	r.Patch("/activity-groups/{id}", controllers.UpdateActivity)
 	r.Delete("/activity-groups/{id}", controllers.DeleteActivity)
 
+	r.Get("/todo-items", controllers.GetTodos)
+	r.Get("/todo-items/{id}", controllers.ShowTodo)
+	r.Patch("/todo-items/{id}", controllers.UpdateTodo)
+	r.Delete("/todo-items/{id}", controllers.DeleteTodo)
+	r.Post("/todo-items", controllers.AddTodo)
+
 	return r
 }
