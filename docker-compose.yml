@@ -5,6 +5,12 @@ services:
     ports:
       - "8081:8081"
     image : todo-list-challenge
+    environment:
+      MYSQL_DBNAME: 'todo-list'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_HOST: '127.0.0.1'
+      MYSQL_PORT: '3306'
   db:
     image: mysql:5.7
     platform: linux/x86_64
