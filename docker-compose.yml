@@ -1,31 +1,43 @@
 version: "3.9"
 services:
-  web:
-    build: .
-    ports:
-      - "8081:8081"
-    image : todo-list-challenge
-    environment:
-      MYSQL_DBNAME: 'todo-list'
-      MYSQL_USER: 'user'
-      MYSQL_PASSWORD: 'password'
-      MYSQL_HOST: '127.0.0.1'
-      MYSQL_PORT: '3306'
   db:
     image: mysql:5.7
     platform: linux/x86_64
     restart: always
-    container_name: todo-db
     environment:
       MYSQL_DATABASE: 'todo-list'
       MYSQL_USER: 'user'
       MYSQL_PASSWORD: 'password'
       MYSQL_ROOT_PASSWORD: 'password'
+    container_name: todo-db
+    networks:
+      - todo-network
     ports:
       - '3306:3306'
     expose:
       - '3306'
     volumes:
-      - my-db:/var/lib/mysql
+      - db:/var/lib/mysql
+  web:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "8081:8081"
+    image : todo-list-challenge
+    environment:
+      MYSQL_DBNAME: todo-list
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+    links:
+      - db
+    networks:
+      - todo-network
 volumes:
-  my-db:
+  db:
+    driver: local
+networks:
+  todo-network:
+    driver: bridge

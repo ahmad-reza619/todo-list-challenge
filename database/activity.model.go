@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -35,21 +36,24 @@ func FindAllActivity(db *sql.DB) []Activity {
 	return activities
 }
 
-func FindByActivityId(db *sql.DB, id int64) Activity {
+func FindByActivityId(db *sql.DB, id int64) (Activity, error) {
 	activityRec, err := db.Query("select id, title, email, created_at, updated_at, deleted_at from activity where id=?", id)
 	if err != nil {
-		panic(err.Error())
+		return Activity{}, err
 	}
 	activity := Activity{}
-	for activityRec.Next() {
+	rows := activityRec.Next()
+	if rows {
 		err = activityRec.Scan(&activity.Id, &activity.Title, &activity.Email, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
 
 		if err != nil {
-			panic(err.Error())
+			return Activity{}, err
 		}
+	} else {
+		return Activity{}, errors.New("No Record Found")
 	}
 
-	return activity
+	return activity, nil
 }
 
 func AddActivity(db *sql.DB, title string, email string) int64 {
@@ -69,26 +73,34 @@ func AddActivity(db *sql.DB, title string, email string) int64 {
 	return lastId
 }
 
-func DeleteActivityById(db *sql.DB, id int64) int64 {
+func DeleteActivityById(db *sql.DB, id int64) error {
 	delOps, err := db.Prepare("DELETE from activity where id = ?")
 
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 	res, err := delOps.Exec(id)
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 	rows, err := res.RowsAffected()
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
-	return rows
+	if rows > 0 {
+		return nil
+	}
+	return errors.New("No Records Found")
 }
-func UpdateActivityById(db *sql.DB, id int64, title string) {
+func UpdateActivityById(db *sql.DB, id int64, title string) error {
 	updateOps, err := db.Prepare("UPDATE activity SET title = ? WHERE id = ?")
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
-	updateOps.Exec(title, id)
+	result, _ := updateOps.Exec(title, id)
+	rows, _ := result.RowsAffected()
+	if rows > 0 {
+		return nil
+	}
+	return errors.New("Id should be present")
 }

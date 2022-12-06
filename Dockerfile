@@ -1,18 +1,17 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.19-alpine
+FROM golang:1.19-buster
+
+# RUN apk update && apk add --no-cache git
 
 WORKDIR /app
 
-COPY go.mod ./
-COPY go.sum ./
+COPY . . 
 
-RUN go mod download
-
-COPY . ./
+RUN go mod tidy
 
 RUN go build -o todo-list-challenge
 
 EXPOSE 8081
 
-CMD [ "todo-list-challenge" ]
+ENTRYPOINT [ "/app/todo-list-challenge" ]

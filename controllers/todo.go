@@ -54,7 +54,17 @@ func ShowTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todo := database.FindTodoById(db, id)
+	todo, err := database.FindTodoById(db, id)
+	if err != nil && err.Error() == "No Records Found" {
+		json, _ := json.Marshal(FailedResponse{
+			"Not Found",
+			"Todo with ID " + idStr + " Not Found",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(json)
+		return
+	}
 	type Response struct {
 		Status  string        `json:"status"`
 		Message string        `json:"message"`
@@ -79,17 +89,49 @@ func AddTodo(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	type RBody struct {
-		ActivityGroupId *int64  `json:"activity_group_id"`
-		Title           *string `json:"title"`
+		ActivityGroupId int64  `json:"activity_group_id"`
+		Title           string `json:"title"`
 	}
-	requestBody := RBody{}
+	var requestBody RBody
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if requestBody.ActivityGroupId == int64(0) {
+		json, _ := json.Marshal(FailedResponse{
+			"Bad Request",
+			"activity_group_id cannot be null",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(json)
+		return
 	}
 
-	lastId := database.AddTodo(db, *requestBody.Title, *requestBody.ActivityGroupId)
-	todo := database.FindTodoById(db, lastId)
+	if requestBody.Title == "" {
+		json, _ := json.Marshal(FailedResponse{
+			"Bad Request",
+			"title cannot be null",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(json)
+		return
+	}
+
+	lastId := database.AddTodo(db, requestBody.Title, requestBody.ActivityGroupId)
+	todo, errDb := database.FindTodoById(db, lastId)
+	if errDb != nil && errDb.Error() == "No Records Found" {
+		json, _ := json.Marshal(FailedResponse{
+			"Not Found",
+			"Todo with ID " + strconv.FormatInt(lastId, 10) + " Not Found",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(json)
+		return
+	}
 
 	type Response struct {
 		Status  string        `json:"status"`
@@ -107,6 +149,7 @@ func AddTodo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	w.Write(toJson)
 }
 
@@ -121,7 +164,17 @@ func DeleteTodo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Id should be present", 400)
 	}
 
-	database.DeleteTodoById(db, id)
+	errDb := database.DeleteTodoById(db, id)
+	if errDb != nil && errDb.Error() == "No Records Found" {
+		json, _ := json.Marshal(FailedResponse{
+			"Not Found",
+			"Todo with ID " + idStr + " Not Found",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(json)
+		return
+	}
 
 	type Response struct {
 		Status  string   `json:"status"`
@@ -154,16 +207,27 @@ func UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type RBody struct {
-		Title *string `json:"title"`
+		Title    string `json:"title,omitempty"`
+		IsActive *bool  `json:"is_active,omitempty"`
 	}
-	requestBody := RBody{}
+	var requestBody RBody
 	errBody := json.NewDecoder(r.Body).Decode(&requestBody)
 	if errBody != nil {
-		http.Error(w, "Body should be present", 400)
+		http.Error(w, errBody.Error(), 400)
 		return
 	}
-	database.UpdateTodoById(db, id, *requestBody.Title)
-	todo := database.FindTodoById(db, id)
+	database.UpdateTodoById(db, id, requestBody.Title, requestBody.IsActive)
+	todo, errDb := database.FindTodoById(db, id)
+	if errDb != nil && errDb.Error() == "No Records Found" {
+		json, _ := json.Marshal(FailedResponse{
+			"Not Found",
+			"Todo with ID " + idStr + " Not Found",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(json)
+		return
+	}
 
 	type Response struct {
 		Status  string        `json:"status"`

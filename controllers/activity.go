@@ -10,6 +10,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type FailedResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
 func AllActivity(w http.ResponseWriter, r *http.Request) {
 	db := database.ConnectDB()
 	defer db.Close()
@@ -44,7 +49,17 @@ func ShowActivity(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err.Error())
 	}
-	activity := database.FindByActivityId(db, id)
+	activity, err := database.FindByActivityId(db, id)
+	if err != nil && err.Error() == "No Record Found" {
+		json, _ := json.Marshal(FailedResponse{
+			"Not Found",
+			"Activity with ID " + idStr + " Not Found",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(json)
+		return
+	}
 	type ResponseActivity struct {
 		Status  string            `json:"status"`
 		Message string            `json:"message"`
@@ -67,18 +82,30 @@ func AddActivity(w http.ResponseWriter, r *http.Request) {
 	db := database.ConnectDB()
 	defer db.Close()
 	type RBody struct {
-		Title *string `json:"title"`
-		Email *string `json:"email"`
+		Title string `json:"title"`
+		Email string `json:"email"`
 	}
-	requestBody := RBody{}
+	var requestBody RBody
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
-	lastId := database.AddActivity(db, *requestBody.Email, *requestBody.Title)
+	if requestBody.Title == "" {
+		json, _ := json.Marshal(FailedResponse{
+			"Bad Request",
+			"title cannot be null",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(json)
+		return
+	}
 
-	activity := database.FindByActivityId(db, lastId)
+	lastId := database.AddActivity(db, requestBody.Title, requestBody.Email)
+
+	activity, err := database.FindByActivityId(db, lastId)
 
 	type DataActivity struct {
 		CreatedAt time.Time `json:"created_at"`
@@ -114,6 +141,7 @@ func AddActivity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	w.Write(response)
 }
 
@@ -144,7 +172,17 @@ func UpdateActivity(w http.ResponseWriter, r *http.Request) {
 		panic(err.Error())
 	}
 
-	database.UpdateActivityById(db, id, *requestBody.Title)
+	errTrans := database.UpdateActivityById(db, id, *requestBody.Title)
+	if errTrans != nil {
+		json, _ := json.Marshal(FailedResponse{
+			"Not Found",
+			"Activity with ID " + idStr + " Not Found",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(json)
+		return
+	}
 
 	type ResponseActivity struct {
 		Status  string            `json:"status"`
@@ -152,7 +190,7 @@ func UpdateActivity(w http.ResponseWriter, r *http.Request) {
 		Data    database.Activity `json:"data"`
 	}
 
-	data := database.FindByActivityId(db, id)
+	data, err := database.FindByActivityId(db, id)
 
 	response := ResponseActivity{
 		"Success",
@@ -177,7 +215,17 @@ func DeleteActivity(w http.ResponseWriter, r *http.Request) {
 		panic(err.Error())
 	}
 
-	rows := database.DeleteActivityById(db, id)
+	errDb := database.DeleteActivityById(db, id)
+	if errDb != nil && errDb.Error() == "No Records Found" {
+		json, _ := json.Marshal(FailedResponse{
+			"Not Found",
+			"Activity with ID " + idStr + " Not Found",
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(json)
+		return
+	}
 
 	type ResponseActivity struct {
 		Status  string   `json:"status"`
@@ -185,12 +233,10 @@ func DeleteActivity(w http.ResponseWriter, r *http.Request) {
 		Data    struct{} `json:"data"`
 	}
 
-	if rows > 0 {
-		toJson := ResponseActivity{
-			"Success",
-			"Success",
-			struct{}{},
-		}
-		sendJson(w, toJson)
+	toJson := ResponseActivity{
+		"Success",
+		"Success",
+		struct{}{},
 	}
+	sendJson(w, toJson)
 }

@@ -2,6 +2,8 @@ package database
 
 import (
 	"database/sql"
+	"errors"
+	"strings"
 	"time"
 )
 
@@ -35,21 +37,23 @@ func FindAllTodo(db *sql.DB) []Todo {
 	return todos
 }
 
-func FindTodoById(db *sql.DB, id int64) Todo {
+func FindTodoById(db *sql.DB, id int64) (Todo, error) {
 	todoRec, err := db.Query("select id, activity_group_id, title, is_active, priority, created_at, updated_at, deleted_at from todo where id=?", id)
 	if err != nil {
-		panic(err.Error())
+		return Todo{}, err
 	}
 	todo := Todo{}
-	for todoRec.Next() {
+	if todoRec.Next() {
 		err = todoRec.Scan(&todo.Id, &todo.ActivityGroupId, &todo.Title, &todo.IsActive, &todo.Priority, &todo.CreatedAt, &todo.UpdatedAt, &todo.DeletedAt)
 
 		if err != nil {
-			panic(err.Error())
+			return Todo{}, err
 		}
+	} else {
+		return Todo{}, errors.New("No Records Found")
 	}
 
-	return todo
+	return todo, nil
 }
 
 func FindTodoByActivityId(db *sql.DB, id int64) []Todo {
@@ -89,26 +93,43 @@ func AddTodo(db *sql.DB, title string, activity_group_id int64) int64 {
 	return lastId
 }
 
-func DeleteTodoById(db *sql.DB, id int64) int64 {
+func DeleteTodoById(db *sql.DB, id int64) error {
 	delOps, err := db.Prepare("DELETE from todo where id = ?")
 
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 	res, err := delOps.Exec(id)
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 	rows, err := res.RowsAffected()
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
-	return rows
+	if rows > 0 {
+		return nil
+	}
+	return errors.New("No Records Found")
 }
-func UpdateTodoById(db *sql.DB, id int64, title string) {
-	updateOps, err := db.Prepare("UPDATE todo SET title = ? WHERE id = ?")
+func UpdateTodoById(db *sql.DB, id int64, title string, isActive *bool) {
+	q := `UPDATE todo SET `
+	qParts := make([]string, 0, 2)
+	args := make([]interface{}, 0, 2)
+
+	if title != "" {
+		qParts = append(qParts, `title = ?`)
+		args = append(args, title)
+	}
+	if isActive != nil {
+		qParts = append(qParts, `is_active = ?`)
+		args = append(args, isActive)
+	}
+	q += strings.Join(qParts, `,`) + ` WHERE id = ?`
+	args = append(args, id)
+	updateOps, err := db.Prepare(q)
 	if err != nil {
 		panic(err.Error())
 	}
-	updateOps.Exec(title, id)
+	updateOps.Exec(args...)
 }
