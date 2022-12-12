@@ -19,7 +19,7 @@ type Todo struct {
 }
 
 func FindAllTodo(db *sql.DB) []Todo {
-	todoRec, err := db.Query("select id, activity_group_id, title, is_active, priority, created_at, updated_at, deleted_at from todo")
+	todoRec, err := db.Query("select id, activity_group_id, title, is_active, priority, created_at, updated_at, deleted_at from todos")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -38,7 +38,8 @@ func FindAllTodo(db *sql.DB) []Todo {
 }
 
 func FindTodoById(db *sql.DB, id int64) (Todo, error) {
-	todoRec, err := db.Query("select id, activity_group_id, title, is_active, priority, created_at, updated_at, deleted_at from todo where id=?", id)
+	todoRec, err := db.Query("select id, activity_group_id, title, is_active, priority, created_at, updated_at, deleted_at from todos where id=?", id)
+	defer todoRec.Close()
 	if err != nil {
 		return Todo{}, err
 	}
@@ -57,7 +58,8 @@ func FindTodoById(db *sql.DB, id int64) (Todo, error) {
 }
 
 func FindTodoByActivityId(db *sql.DB, id int64) []Todo {
-	todoRec, err := db.Query("select id, activity_group_id, title, is_active, priority, created_at, updated_at, deleted_at from todo where activity_group_id=?", id)
+	todoRec, err := db.Query("select id, activity_group_id, title, is_active, priority, created_at, updated_at, deleted_at from todos where activity_group_id=?", id)
+	defer todoRec.Close()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -77,8 +79,9 @@ func FindTodoByActivityId(db *sql.DB, id int64) []Todo {
 }
 
 func AddTodo(db *sql.DB, title string, activity_group_id int64) int64 {
-	insOps, err := db.Prepare("INSERT INTO todo(title, activity_group_id, is_active, priority) VALUES(?, ?, ?, ?)")
+	insOps, err := db.Prepare("INSERT INTO todos(title, activity_group_id, is_active, priority) VALUES(?, ?, ?, ?)")
 
+	defer insOps.Close()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -94,7 +97,8 @@ func AddTodo(db *sql.DB, title string, activity_group_id int64) int64 {
 }
 
 func DeleteTodoById(db *sql.DB, id int64) error {
-	delOps, err := db.Prepare("DELETE from todo where id = ?")
+	delOps, err := db.Prepare("DELETE from todos where id = ?")
+	defer delOps.Close()
 
 	if err != nil {
 		return err
@@ -113,7 +117,7 @@ func DeleteTodoById(db *sql.DB, id int64) error {
 	return errors.New("No Records Found")
 }
 func UpdateTodoById(db *sql.DB, id int64, title string, isActive *bool) {
-	q := `UPDATE todo SET `
+	q := `UPDATE todos SET `
 	qParts := make([]string, 0, 2)
 	args := make([]interface{}, 0, 2)
 
@@ -128,6 +132,7 @@ func UpdateTodoById(db *sql.DB, id int64, title string, isActive *bool) {
 	q += strings.Join(qParts, `,`) + ` WHERE id = ?`
 	args = append(args, id)
 	updateOps, err := db.Prepare(q)
+	defer updateOps.Close()
 	if err != nil {
 		panic(err.Error())
 	}

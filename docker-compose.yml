@@ -20,10 +20,11 @@ services:
       - db:/var/lib/mysql
   web:
     build: .
+    platform: linux/x86_64
     depends_on:
       - db
     ports:
-      - "8081:8081"
+      - "3030:3030"
     image : todo-list-challenge
     environment:
       MYSQL_DBNAME: todo-list

@@ -24,13 +24,7 @@ func GetTodos(w http.ResponseWriter, r *http.Request) {
 		todos = database.FindTodoByActivityId(db, activity_group_id)
 	}
 
-	type Response struct {
-		Status  string          `json:"status"`
-		Message string          `json:"message"`
-		Data    []database.Todo `json:"data"`
-	}
-
-	toJson, err := json.Marshal(Response{
+	toJson, err := json.Marshal(ResponseActivity[[]database.Todo]{
 		"Success",
 		"Success",
 		todos,
@@ -65,13 +59,8 @@ func ShowTodo(w http.ResponseWriter, r *http.Request) {
 		w.Write(json)
 		return
 	}
-	type Response struct {
-		Status  string        `json:"status"`
-		Message string        `json:"message"`
-		Data    database.Todo `json:"data"`
-	}
 
-	toJson, errEncode := json.Marshal(Response{
+	toJson, errEncode := json.Marshal(ResponseActivity[database.Todo]{
 		"Success",
 		"Success",
 		todo,
@@ -133,13 +122,7 @@ func AddTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type Response struct {
-		Status  string        `json:"status"`
-		Message string        `json:"message"`
-		Data    database.Todo `json:"data"`
-	}
-
-	toJson, err := json.Marshal(Response{
+	toJson, err := json.Marshal(ResponseActivity[database.Todo]{
 		"Success",
 		"Success",
 		todo,
@@ -176,13 +159,7 @@ func DeleteTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type Response struct {
-		Status  string   `json:"status"`
-		Message string   `json:"message"`
-		Data    struct{} `json:"data"`
-	}
-
-	toJson, err := json.Marshal(Response{
+	toJson, err := json.Marshal(ResponseActivity[struct{}]{
 		"Success",
 		"Success",
 		struct{}{},
@@ -229,12 +206,7 @@ func UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type Response struct {
-		Status  string        `json:"status"`
-		Message string        `json:"message"`
-		Data    database.Todo `json:"data"`
-	}
-	toJson, errEncode := json.Marshal(Response{
+	toJson, errEncode := json.Marshal(ResponseActivity[database.Todo]{
 		"Success",
 		"Success",
 		todo,

@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -18,7 +19,8 @@ type Activity struct {
 }
 
 func FindAllActivity(db *sql.DB) []Activity {
-	activityRec, err := db.Query("select id, title, email, created_at, updated_at, deleted_at from activity")
+	activityRec, err := db.Query("select id, title, email, created_at, updated_at, deleted_at from activities")
+	defer activityRec.Close()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -37,7 +39,8 @@ func FindAllActivity(db *sql.DB) []Activity {
 }
 
 func FindByActivityId(db *sql.DB, id int64) (Activity, error) {
-	activityRec, err := db.Query("select id, title, email, created_at, updated_at, deleted_at from activity where id=?", id)
+	activityRec, err := db.Query("select id, title, email, created_at, updated_at, deleted_at from activities where id=?", id)
+	defer activityRec.Close()
 	if err != nil {
 		return Activity{}, err
 	}
@@ -57,29 +60,21 @@ func FindByActivityId(db *sql.DB, id int64) (Activity, error) {
 }
 
 func AddActivity(db *sql.DB, title string, email string) int64 {
-	insOps, err := db.Prepare("INSERT INTO activity(title, email) VALUES(?, ?)")
+	res, err := db.Exec("INSERT INTO activities(title, email) VALUES(?, ?)", title, email)
 
 	if err != nil {
-		panic(err.Error())
-	}
-	res, err := insOps.Exec(title, email)
-	if err != nil {
-		panic(err.Error())
+		log.Println(err.Error())
 	}
 	lastId, err := res.LastInsertId()
 	if err != nil {
-		panic(err.Error())
+		log.Println(err.Error())
 	}
 	return lastId
 }
 
 func DeleteActivityById(db *sql.DB, id int64) error {
-	delOps, err := db.Prepare("DELETE from activity where id = ?")
+	res, err := db.Exec("DELETE from activities where id = ?", id)
 
-	if err != nil {
-		return err
-	}
-	res, err := delOps.Exec(id)
 	if err != nil {
 		return err
 	}
@@ -93,11 +88,7 @@ func DeleteActivityById(db *sql.DB, id int64) error {
 	return errors.New("No Records Found")
 }
 func UpdateActivityById(db *sql.DB, id int64, title string) error {
-	updateOps, err := db.Prepare("UPDATE activity SET title = ? WHERE id = ?")
-	if err != nil {
-		return err
-	}
-	result, _ := updateOps.Exec(title, id)
+	result, _ := db.Exec("UPDATE activities SET title = ? WHERE id = ?", title, id)
 	rows, _ := result.RowsAffected()
 	if rows > 0 {
 		return nil

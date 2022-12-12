@@ -10,23 +10,12 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type FailedResponse struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
-}
-
 func AllActivity(w http.ResponseWriter, r *http.Request) {
 	db := database.ConnectDB()
 	defer db.Close()
 
 	activities := database.FindAllActivity(db)
-	type ResponseActivity struct {
-		Status  string              `json:"status"`
-		Message string              `json:"message"`
-		Data    []database.Activity `json:"data"`
-	}
-
-	json, err := json.Marshal(ResponseActivity{
+	json, err := json.Marshal(ResponseActivity[[]database.Activity]{
 		"Success",
 		"Success",
 		activities,
@@ -60,13 +49,7 @@ func ShowActivity(w http.ResponseWriter, r *http.Request) {
 		w.Write(json)
 		return
 	}
-	type ResponseActivity struct {
-		Status  string            `json:"status"`
-		Message string            `json:"message"`
-		Data    database.Activity `json:"data"`
-	}
-
-	toJson := ResponseActivity{
+	toJson := ResponseActivity[database.Activity]{
 		"Success",
 		"Success",
 		activity,
@@ -115,12 +98,6 @@ func AddActivity(w http.ResponseWriter, r *http.Request) {
 		Email     string    `json:"email"`
 	}
 
-	type ResponseActivity struct {
-		Status  string       `json:"status"`
-		Message string       `json:"message"`
-		Data    DataActivity `json:"data"`
-	}
-
 	data := DataActivity{
 		activity.CreatedAt,
 		activity.UpdatedAt,
@@ -129,7 +106,7 @@ func AddActivity(w http.ResponseWriter, r *http.Request) {
 		activity.Email,
 	}
 
-	toJson := ResponseActivity{
+	toJson := ResponseActivity[DataActivity]{
 		"Success",
 		"Success",
 		data,
@@ -184,15 +161,9 @@ func UpdateActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type ResponseActivity struct {
-		Status  string            `json:"status"`
-		Message string            `json:"message"`
-		Data    database.Activity `json:"data"`
-	}
-
 	data, err := database.FindByActivityId(db, id)
 
-	response := ResponseActivity{
+	response := ResponseActivity[database.Activity]{
 		"Success",
 		"Success",
 		data,
@@ -227,13 +198,7 @@ func DeleteActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type ResponseActivity struct {
-		Status  string   `json:"status"`
-		Message string   `json:"message"`
-		Data    struct{} `json:"data"`
-	}
-
-	toJson := ResponseActivity{
+	toJson := ResponseActivity[struct{}]{
 		"Success",
 		"Success",
 		struct{}{},
