@@ -4,7 +4,7 @@
 First you have to have docker & docker compose, then run the rabbitmq container
 
 ```
-docker compose up message-broker -d
+docker compose up message-broker db -d
 ```
 
 then just run the program
